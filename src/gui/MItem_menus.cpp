@@ -121,6 +121,7 @@ template struct MI_SCREEN_CTOR<ScreenMenuAdvancedSettings>;
 template struct MI_SCREEN_CTOR<ScreenMenuAdvancedStepsPerMm>;
 template struct MI_SCREEN_CTOR<ScreenMenuAdvancedMotorCurrents>;
 template struct MI_SCREEN_CTOR<ScreenMenuAdvancedHomingSensitivity>;
+template struct MI_SCREEN_CTOR<ScreenMenuAdvancedChopperTiming>;
 template struct MI_SCREEN_CTOR<ScreenMenuUserInterface>;
 template struct MI_SCREEN_CTOR<ScreenMenuLangAndTime>;
 template struct MI_SCREEN_CTOR<ScreenMenuNetwork>;

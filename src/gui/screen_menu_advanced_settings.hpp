@@ -15,7 +15,8 @@ using ScreenMenuAdvancedSettings = ScreenMenu<
     MI_RETURN,
     MI_ADVANCED_STEPS_PER_MM,
     MI_ADVANCED_MOTOR_CURRENTS,
-    MI_ADVANCED_HOMING_SENSITIVITY>;
+    MI_ADVANCED_HOMING_SENSITIVITY,
+    MI_ADVANCED_CHOPPER_TIMING>;
 
 using ScreenMenuAdvancedStepsPerMm = ScreenMenu<
     GuiDefaults::MenuFooter,
@@ -40,6 +41,17 @@ using ScreenMenuAdvancedHomingSensitivity = ScreenMenu<
     MI_ADV_HOMING_SENS_X,
     MI_ADV_HOMING_SENS_Y,
     MI_ADV_HOMING_SENS_RESET_DEFAULTS>;
+
+using ScreenMenuAdvancedChopperTiming = ScreenMenu<
+    GuiDefaults::MenuFooter,
+    MI_RETURN,
+    MI_ADV_CHOPPER_TOFF_X,
+    MI_ADV_CHOPPER_HEND_X,
+    MI_ADV_CHOPPER_HSTRT_X,
+    MI_ADV_CHOPPER_TOFF_Y,
+    MI_ADV_CHOPPER_HEND_Y,
+    MI_ADV_CHOPPER_HSTRT_Y,
+    MI_ADV_CHOPPER_RESET_DEFAULTS>;
 
 } // namespace detail
 
@@ -72,6 +84,16 @@ public:
     constexpr static const char *label = N_("HOMING SENSITIVITY");
 
     ScreenMenuAdvancedHomingSensitivity();
+
+protected:
+    void windowEvent(window_t *sender, GUI_event_t ev, void *param) override;
+};
+
+class ScreenMenuAdvancedChopperTiming : public detail::ScreenMenuAdvancedChopperTiming {
+public:
+    constexpr static const char *label = N_("CHOPPER TIMING");
+
+    ScreenMenuAdvancedChopperTiming();
 
 protected:
     void windowEvent(window_t *sender, GUI_event_t ev, void *param) override;

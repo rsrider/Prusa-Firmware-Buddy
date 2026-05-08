@@ -121,6 +121,9 @@ using MI_ADVANCED_MOTOR_CURRENTS
 using MI_ADVANCED_HOMING_SENSITIVITY
     = MI_SCREEN<N_("Homing sensitivity"), class ScreenMenuAdvancedHomingSensitivity>;
 
+using MI_ADVANCED_CHOPPER_TIMING
+    = MI_SCREEN<N_("Chopper timing"), class ScreenMenuAdvancedChopperTiming>;
+
 using MI_USER_INTERFACE
     = MI_SCREEN<N_("User Interface"), class ScreenMenuUserInterface>;
 using MI_LANG_AND_TIME

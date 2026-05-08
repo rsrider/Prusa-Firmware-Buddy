@@ -569,6 +569,13 @@ struct CurrentStore
     StoreItem<int16_t, defaults::homing_sens_x, ItemFlag::calibrations | ItemFlag::common_misconfigurations, journal::hash("Homing Sens X")> homing_sens_x; // X axis homing sensitivity
     StoreItem<int16_t, defaults::homing_sens_y, ItemFlag::calibrations | ItemFlag::common_misconfigurations, journal::hash("Homing Sens Y")> homing_sens_y; // Y axis homing sensitivity
 
+    StoreItem<uint8_t, defaults::tmc_chopper_toff, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper TOFF X")> tmc_chopper_toff_x;
+    StoreItem<int8_t, defaults::tmc_chopper_hend, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper HEND X")> tmc_chopper_hend_x;
+    StoreItem<uint8_t, defaults::tmc_chopper_hstrt, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper HSTRT X")> tmc_chopper_hstrt_x;
+    StoreItem<uint8_t, defaults::tmc_chopper_toff, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper TOFF Y")> tmc_chopper_toff_y;
+    StoreItem<int8_t, defaults::tmc_chopper_hend, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper HEND Y")> tmc_chopper_hend_y;
+    StoreItem<uint8_t, defaults::tmc_chopper_hstrt, ItemFlag::hw_config | ItemFlag::common_misconfigurations, journal::hash("TMC Chopper HSTRT Y")> tmc_chopper_hstrt_y;
+
     StoreItem<bool, true, ItemFlag::features, journal::hash("Stuck filament detection V2")> stuck_filament_detection;
 
     StoreItem<bool, false, ItemFlag::features, journal::hash("Stealth mode")> stealth_mode;

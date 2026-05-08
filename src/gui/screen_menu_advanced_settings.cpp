@@ -7,6 +7,7 @@
 #include <marlin_client.hpp>
 #include <config_store/constants.hpp>
 #include <config_store/store_instance.hpp>
+#include <persistent_stores/store_instances/config_store/defaults.hpp>
 #include <persistent_stores/store_instances/config_store/store_c_api.h>
 #include <stdint.h>
 
@@ -87,6 +88,48 @@ void ScreenMenuAdvancedHomingSensitivity::windowEvent(window_t *sender, GUI_even
 
         config_store().homing_sens_x.set(config_store_ns::stallguard_sensitivity_unset);
         config_store().homing_sens_y.set(config_store_ns::stallguard_sensitivity_unset);
+
+        Invalidate();
+        break;
+    default:
+        break;
+    }
+}
+
+ScreenMenuAdvancedChopperTiming::ScreenMenuAdvancedChopperTiming()
+    : detail::ScreenMenuAdvancedChopperTiming(_(label)) {
+    const bool editing_enabled = !marlin_client::is_printing();
+
+    Item<MI_ADV_CHOPPER_TOFF_X>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_HEND_X>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_HSTRT_X>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_TOFF_Y>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_HEND_Y>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_HSTRT_Y>().set_enabled(editing_enabled);
+    Item<MI_ADV_CHOPPER_RESET_DEFAULTS>().set_enabled(editing_enabled);
+}
+
+void ScreenMenuAdvancedChopperTiming::windowEvent(window_t *sender, GUI_event_t ev, void *param) {
+    if (ev != GUI_event_t::CHILD_CLICK) {
+        ScreenMenu::windowEvent(sender, ev, param);
+        return;
+    }
+
+    switch (static_cast<AdvancedSettingsClickCommand>(reinterpret_cast<intptr_t>(param))) {
+    case AdvancedSettingsClickCommand::Reset_chopper_timing:
+        Item<MI_ADV_CHOPPER_TOFF_X>().SetVal(config_store_ns::defaults::tmc_chopper_toff);
+        Item<MI_ADV_CHOPPER_HEND_X>().SetVal(config_store_ns::defaults::tmc_chopper_hend);
+        Item<MI_ADV_CHOPPER_HSTRT_X>().SetVal(config_store_ns::defaults::tmc_chopper_hstrt);
+        Item<MI_ADV_CHOPPER_TOFF_Y>().SetVal(config_store_ns::defaults::tmc_chopper_toff);
+        Item<MI_ADV_CHOPPER_HEND_Y>().SetVal(config_store_ns::defaults::tmc_chopper_hend);
+        Item<MI_ADV_CHOPPER_HSTRT_Y>().SetVal(config_store_ns::defaults::tmc_chopper_hstrt);
+
+        Item<MI_ADV_CHOPPER_TOFF_X>().Store();
+        Item<MI_ADV_CHOPPER_HEND_X>().Store();
+        Item<MI_ADV_CHOPPER_HSTRT_X>().Store();
+        Item<MI_ADV_CHOPPER_TOFF_Y>().Store();
+        Item<MI_ADV_CHOPPER_HEND_Y>().Store();
+        Item<MI_ADV_CHOPPER_HSTRT_Y>().Store();
 
         Invalidate();
         break;

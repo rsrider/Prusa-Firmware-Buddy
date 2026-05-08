@@ -58,6 +58,40 @@ static constexpr uint16_t COREONE_TMC2130_RSENSE_022_MAX_CURRENT_MA = 958;
 static uint16_t clamp_coreone_tmc2130_current(const uint16_t current) {
     return current > COREONE_TMC2130_RSENSE_022_MAX_CURRENT_MA ? COREONE_TMC2130_RSENSE_022_MAX_CURRENT_MA : current;
 }
+
+static bool coreone_chopper_timing_is_valid(const chopper_timing_t timing) {
+    return timing.toff >= 1 && timing.toff <= 15 && timing.hend >= -3 && timing.hend <= 12 && timing.hstrt >= 1 && timing.hstrt <= 8;
+}
+
+static chopper_timing_t coreone_chopper_timing_for_axis(const AxisEnum axis) {
+    chopper_timing_t timing = chopper_timing;
+
+    if (axis == X_AXIS) {
+        timing = {
+            config_store().tmc_chopper_toff_x.get(),
+            config_store().tmc_chopper_hend_x.get(),
+            config_store().tmc_chopper_hstrt_x.get(),
+        };
+    } else if (axis == Y_AXIS) {
+        timing = {
+            config_store().tmc_chopper_toff_y.get(),
+            config_store().tmc_chopper_hend_y.get(),
+            config_store().tmc_chopper_hstrt_y.get(),
+        };
+    }
+
+    return coreone_chopper_timing_is_valid(timing) ? timing : chopper_timing;
+}
+
+static chopper_timing_t coreone_chopper_timing_for_driver(const TMCMarlin<TMC2130Stepper> &st) {
+    if (st.axis_letter == 'X') {
+        return coreone_chopper_timing_for_axis(X_AXIS);
+    }
+    if (st.axis_letter == 'Y') {
+        return coreone_chopper_timing_for_axis(Y_AXIS);
+    }
+    return chopper_timing;
+}
 #endif
 
 //   IC = TMC model number
@@ -137,12 +171,19 @@ TMC_SPI_DEFINE_E(5);
 void tmc_init(TMCMarlin<TMC2130Stepper> &st, const uint16_t mA, const uint16_t microsteps, const uint32_t thrs, const bool stealth) {
     st.begin();
 
+    const chopper_timing_t axis_chopper_timing =
+#if PRINTER_IS_PRUSA_COREONE()
+        coreone_chopper_timing_for_driver(st);
+#else
+        chopper_timing;
+#endif
+
     CHOPCONF_t chopconf { 0 };
     chopconf.tbl = 1;
-    chopconf.toff = chopper_timing.toff;
+    chopconf.toff = axis_chopper_timing.toff;
     chopconf.intpol = INTERPOLATE;
-    chopconf.hend = chopper_timing.hend + 3;
-    chopconf.hstrt = chopper_timing.hstrt - 1;
+    chopconf.hend = axis_chopper_timing.hend + 3;
+    chopconf.hstrt = axis_chopper_timing.hstrt - 1;
     #if ENABLED(SQUARE_WAVE_STEPPING)
     chopconf.dedge = true;
     #endif
@@ -205,6 +246,43 @@ void tmc_init(TMCMarlin<TMC2130Stepper> &st, const uint16_t mA, const uint16_t m
     st.GSTAT(); // Clear GSTAT
 }
 #endif // TMC2130
+
+#if PRINTER_IS_PRUSA_COREONE() && HAS_DRIVER(TMC2130)
+static void coreone_apply_chopper_timing(TMCMarlin<TMC2130Stepper> &st, const chopper_timing_t timing) {
+    if (!coreone_chopper_timing_is_valid(timing)) {
+        return;
+    }
+
+    CHOPCONF_t chopconf { 0 };
+    chopconf.sr = st.CHOPCONF();
+    chopconf.toff = timing.toff;
+    chopconf.hend = timing.hend + 3;
+    chopconf.hstrt = timing.hstrt - 1;
+    st.CHOPCONF(chopconf.sr);
+}
+
+void coreone_apply_xy_chopper_timing(const AxisEnum axis, const uint8_t toff, const int8_t hend, const uint8_t hstrt) {
+    const chopper_timing_t timing { toff, hend, hstrt };
+    if (!coreone_chopper_timing_is_valid(timing)) {
+        return;
+    }
+
+    switch (axis) {
+    case X_AXIS:
+        #if AXIS_IS_TMC(X)
+        coreone_apply_chopper_timing(stepperX, timing);
+        #endif
+        break;
+    case Y_AXIS:
+        #if AXIS_IS_TMC(Y)
+        coreone_apply_chopper_timing(stepperY, timing);
+        #endif
+        break;
+    default:
+        break;
+    }
+}
+#endif
 
 #if HAS_DRIVER(TMC2160)
 void tmc_init(TMCMarlin<TMC2160Stepper> &st, const uint16_t mA, const uint16_t microsteps, const uint32_t thrs, const bool stealth) {

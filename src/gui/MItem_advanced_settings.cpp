@@ -9,8 +9,10 @@
 #include <module/planner.h>
 #include <module/prusa/homing_corexy.hpp>
 #include <module/stepper/indirection.h>
+#include <module/stepper/trinamic.h>
 #include <config_store/constants.hpp>
 #include <config_store/store_instance.hpp>
+#include <persistent_stores/store_instances/config_store/defaults.hpp>
 #include <persistent_stores/store_instances/config_store/store_c_api.h>
 #include <printers.h>
 #include <stdint.h>
@@ -32,6 +34,24 @@ static constexpr NumericInputConfig motor_current_spin_config = {
 static constexpr NumericInputConfig homing_sensitivity_spin_config = {
     .min_value = -10,
     .max_value = 10,
+    .step = 1,
+};
+
+static constexpr NumericInputConfig chopper_toff_spin_config = {
+    .min_value = 1,
+    .max_value = 15,
+    .step = 1,
+};
+
+static constexpr NumericInputConfig chopper_hend_spin_config = {
+    .min_value = -3,
+    .max_value = 12,
+    .step = 1,
+};
+
+static constexpr NumericInputConfig chopper_hstrt_spin_config = {
+    .min_value = 1,
+    .max_value = 8,
     .step = 1,
 };
 
@@ -258,6 +278,101 @@ static void store_and_apply_homing_sensitivity(const AxisEnum axis, const int16_
     apply_homing_sensitivity(axis, sensitivity);
 }
 
+static bool chopper_timing_is_valid(const uint8_t toff, const int8_t hend, const uint8_t hstrt) {
+    return toff >= chopper_toff_spin_config.min_value && toff <= chopper_toff_spin_config.max_value
+        && hend >= chopper_hend_spin_config.min_value && hend <= chopper_hend_spin_config.max_value
+        && hstrt >= chopper_hstrt_spin_config.min_value && hstrt <= chopper_hstrt_spin_config.max_value;
+}
+
+static void apply_chopper_timing(const AxisEnum axis) {
+#if PRINTER_IS_PRUSA_COREONE()
+    uint8_t toff = config_store_ns::defaults::tmc_chopper_toff;
+    int8_t hend = config_store_ns::defaults::tmc_chopper_hend;
+    uint8_t hstrt = config_store_ns::defaults::tmc_chopper_hstrt;
+
+    switch (axis) {
+    case X_AXIS:
+        toff = config_store().tmc_chopper_toff_x.get();
+        hend = config_store().tmc_chopper_hend_x.get();
+        hstrt = config_store().tmc_chopper_hstrt_x.get();
+        break;
+    case Y_AXIS:
+        toff = config_store().tmc_chopper_toff_y.get();
+        hend = config_store().tmc_chopper_hend_y.get();
+        hstrt = config_store().tmc_chopper_hstrt_y.get();
+        break;
+    default:
+        return;
+    }
+
+    if (!chopper_timing_is_valid(toff, hend, hstrt)) {
+        return;
+    }
+
+    planner.synchronize();
+    coreone_apply_xy_chopper_timing(axis, toff, hend, hstrt);
+#else
+    (void)axis;
+#endif
+}
+
+static void store_chopper_timing_toff(const AxisEnum axis, const uint8_t toff) {
+    if (toff < chopper_toff_spin_config.min_value || toff > chopper_toff_spin_config.max_value) {
+        return;
+    }
+
+    switch (axis) {
+    case X_AXIS:
+        config_store().tmc_chopper_toff_x.set(toff);
+        break;
+    case Y_AXIS:
+        config_store().tmc_chopper_toff_y.set(toff);
+        break;
+    default:
+        return;
+    }
+
+    apply_chopper_timing(axis);
+}
+
+static void store_chopper_timing_hend(const AxisEnum axis, const int8_t hend) {
+    if (hend < chopper_hend_spin_config.min_value || hend > chopper_hend_spin_config.max_value) {
+        return;
+    }
+
+    switch (axis) {
+    case X_AXIS:
+        config_store().tmc_chopper_hend_x.set(hend);
+        break;
+    case Y_AXIS:
+        config_store().tmc_chopper_hend_y.set(hend);
+        break;
+    default:
+        return;
+    }
+
+    apply_chopper_timing(axis);
+}
+
+static void store_chopper_timing_hstrt(const AxisEnum axis, const uint8_t hstrt) {
+    if (hstrt < chopper_hstrt_spin_config.min_value || hstrt > chopper_hstrt_spin_config.max_value) {
+        return;
+    }
+
+    switch (axis) {
+    case X_AXIS:
+        config_store().tmc_chopper_hstrt_x.set(hstrt);
+        break;
+    case Y_AXIS:
+        config_store().tmc_chopper_hstrt_y.set(hstrt);
+        break;
+    default:
+        return;
+    }
+
+    apply_chopper_timing(axis);
+}
+
 MI_ADV_STEPS_PER_UNIT_X::MI_ADV_STEPS_PER_UNIT_X()
     : WiSpin(get_steps_per_unit_x(), steps_per_unit_spin_config, _("X-axis steps/mm")) {}
 
@@ -364,4 +479,77 @@ MI_ADV_HOMING_SENS_RESET_DEFAULTS::MI_ADV_HOMING_SENS_RESET_DEFAULTS()
 
 void MI_ADV_HOMING_SENS_RESET_DEFAULTS::click([[maybe_unused]] IWindowMenu &window_menu) {
     Screens::Access()->Get()->WindowEvent(nullptr, GUI_event_t::CHILD_CLICK, reinterpret_cast<void *>(static_cast<intptr_t>(AdvancedSettingsClickCommand::Reset_homing_sensitivity)));
+}
+
+MI_ADV_CHOPPER_TOFF_X::MI_ADV_CHOPPER_TOFF_X()
+    : WiSpin(config_store().tmc_chopper_toff_x.get(), chopper_toff_spin_config, _("X TOFF")) {}
+
+void MI_ADV_CHOPPER_TOFF_X::Store() {
+    store_chopper_timing_toff(X_AXIS, static_cast<uint8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_TOFF_X::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_HEND_X::MI_ADV_CHOPPER_HEND_X()
+    : WiSpin(config_store().tmc_chopper_hend_x.get(), chopper_hend_spin_config, _("X HEND")) {}
+
+void MI_ADV_CHOPPER_HEND_X::Store() {
+    store_chopper_timing_hend(X_AXIS, static_cast<int8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_HEND_X::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_HSTRT_X::MI_ADV_CHOPPER_HSTRT_X()
+    : WiSpin(config_store().tmc_chopper_hstrt_x.get(), chopper_hstrt_spin_config, _("X HSTRT")) {}
+
+void MI_ADV_CHOPPER_HSTRT_X::Store() {
+    store_chopper_timing_hstrt(X_AXIS, static_cast<uint8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_HSTRT_X::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_TOFF_Y::MI_ADV_CHOPPER_TOFF_Y()
+    : WiSpin(config_store().tmc_chopper_toff_y.get(), chopper_toff_spin_config, _("Y TOFF")) {}
+
+void MI_ADV_CHOPPER_TOFF_Y::Store() {
+    store_chopper_timing_toff(Y_AXIS, static_cast<uint8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_TOFF_Y::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_HEND_Y::MI_ADV_CHOPPER_HEND_Y()
+    : WiSpin(config_store().tmc_chopper_hend_y.get(), chopper_hend_spin_config, _("Y HEND")) {}
+
+void MI_ADV_CHOPPER_HEND_Y::Store() {
+    store_chopper_timing_hend(Y_AXIS, static_cast<int8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_HEND_Y::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_HSTRT_Y::MI_ADV_CHOPPER_HSTRT_Y()
+    : WiSpin(config_store().tmc_chopper_hstrt_y.get(), chopper_hstrt_spin_config, _("Y HSTRT")) {}
+
+void MI_ADV_CHOPPER_HSTRT_Y::Store() {
+    store_chopper_timing_hstrt(Y_AXIS, static_cast<uint8_t>(GetVal()));
+}
+
+void MI_ADV_CHOPPER_HSTRT_Y::OnClick() {
+    Store();
+}
+
+MI_ADV_CHOPPER_RESET_DEFAULTS::MI_ADV_CHOPPER_RESET_DEFAULTS()
+    : IWindowMenuItem(_("Reset to defaults")) {}
+
+void MI_ADV_CHOPPER_RESET_DEFAULTS::click([[maybe_unused]] IWindowMenu &window_menu) {
+    Screens::Access()->Get()->WindowEvent(nullptr, GUI_event_t::CHILD_CLICK, reinterpret_cast<void *>(static_cast<intptr_t>(AdvancedSettingsClickCommand::Reset_chopper_timing)));
 }

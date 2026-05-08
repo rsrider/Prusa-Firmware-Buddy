@@ -306,3 +306,7 @@ using TMCStepperType = _TMCMARLIN_CLASS(TMC_DRIVER_TYPE);
 
 // Return the stepper instance of an axis
 TMCStepperType &stepper_axis(const AxisEnum axis);
+
+#if PRINTER_IS_PRUSA_COREONE()
+void coreone_apply_xy_chopper_timing(AxisEnum axis, uint8_t toff, int8_t hend, uint8_t hstrt);
+#endif

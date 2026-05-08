@@ -256,6 +256,10 @@ namespace defaults {
     inline constexpr int16_t homing_sens_x { stallguard_sensitivity_unset };
     inline constexpr int16_t homing_sens_y { stallguard_sensitivity_unset };
 
+    inline constexpr uint8_t tmc_chopper_toff { 3 };
+    inline constexpr int8_t tmc_chopper_hend { -2 };
+    inline constexpr uint8_t tmc_chopper_hstrt { 6 };
+
 #if HAS_HOTEND_TYPE_SUPPORT()
     inline constexpr HotendType hotend_type {
     #if PRINTER_IS_PRUSA_iX() || PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL()

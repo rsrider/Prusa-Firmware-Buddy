@@ -9,6 +9,7 @@
 enum class AdvancedSettingsClickCommand {
     Reset_motor_currents,
     Reset_homing_sensitivity,
+    Reset_chopper_timing,
 };
 
 class MI_ADV_STEPS_PER_UNIT_X : public WiSpin {
@@ -114,6 +115,74 @@ protected:
 class MI_ADV_HOMING_SENS_RESET_DEFAULTS : public IWindowMenuItem {
 public:
     MI_ADV_HOMING_SENS_RESET_DEFAULTS();
+
+protected:
+    void click(IWindowMenu &window_menu) override;
+};
+
+class MI_ADV_CHOPPER_TOFF_X : public WiSpin {
+public:
+    MI_ADV_CHOPPER_TOFF_X();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_HEND_X : public WiSpin {
+public:
+    MI_ADV_CHOPPER_HEND_X();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_HSTRT_X : public WiSpin {
+public:
+    MI_ADV_CHOPPER_HSTRT_X();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_TOFF_Y : public WiSpin {
+public:
+    MI_ADV_CHOPPER_TOFF_Y();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_HEND_Y : public WiSpin {
+public:
+    MI_ADV_CHOPPER_HEND_Y();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_HSTRT_Y : public WiSpin {
+public:
+    MI_ADV_CHOPPER_HSTRT_Y();
+
+    void Store();
+
+protected:
+    void OnClick() override;
+};
+
+class MI_ADV_CHOPPER_RESET_DEFAULTS : public IWindowMenuItem {
+public:
+    MI_ADV_CHOPPER_RESET_DEFAULTS();
 
 protected:
     void click(IWindowMenu &window_menu) override;
