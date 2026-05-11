@@ -13,6 +13,7 @@
 #include "gui_invalidate.hpp"
 #include "knob_event.hpp"
 #include "marlin_client.hpp"
+#include "marlin_vars.hpp"
 #include <utils/timing/rate_limiter.hpp>
 #include <logging/log.hpp>
 #include "display_hw_checks.hpp"
@@ -60,6 +61,86 @@ static RateLimiter<uint32_t> gui_roll_timer(txtroll_t::GetBaseTick());
 static RateLimiter<uint32_t> gui_loop_timer(GUI_DELAY_LOOP);
 static RateLimiter<uint32_t> gui_redraw_timer(GUI_DELAY_REDRAW);
 
+#if HAS_LEDS() && (PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL())
+static constexpr int32_t LCD_IDLE_BACKLIGHT_TIMEOUT_MS = 5 * 60 * 1000;
+static constexpr uint8_t LCD_BACKLIGHT_ACTIVE_BRIGHTNESS = 100;
+static constexpr uint8_t LCD_BACKLIGHT_OFF_BRIGHTNESS = 0;
+
+static uint32_t lcd_backlight_last_activity_ms = 0;
+static bool lcd_backlight_active = true;
+static marlin_server::State lcd_backlight_last_print_state = marlin_server::State::Idle;
+static uint16_t lcd_backlight_last_job_id = 0;
+static uint8_t lcd_backlight_last_media_inserted = 0;
+
+static void lcd_backlight_apply_brightness() {
+    leds::LEDManager::instance().set_lcd_brightness(lcd_backlight_active ? LCD_BACKLIGHT_ACTIVE_BRIGHTNESS : LCD_BACKLIGHT_OFF_BRIGHTNESS);
+}
+
+static void lcd_backlight_set_active(const bool active) {
+    if (lcd_backlight_active == active) {
+        lcd_backlight_apply_brightness();
+        return;
+    }
+
+    lcd_backlight_active = active;
+    lcd_backlight_apply_brightness();
+}
+
+static void lcd_backlight_activity_ping() {
+    lcd_backlight_last_activity_ms = ticks_ms();
+    lcd_backlight_set_active(true);
+}
+
+static bool lcd_backlight_is_active() {
+    return lcd_backlight_active;
+}
+
+static bool lcd_backlight_printer_busy() {
+    return marlin_client::is_printing();
+}
+
+static void lcd_backlight_init_activity() {
+    lcd_backlight_last_activity_ms = ticks_ms();
+    lcd_backlight_last_print_state = marlin_vars().print_state.get();
+    lcd_backlight_last_job_id = marlin_vars().job_id.get();
+    lcd_backlight_last_media_inserted = marlin_vars().media_inserted.get();
+    lcd_backlight_set_active(true);
+}
+
+static void lcd_backlight_handle_idle_timeout() {
+    const uint32_t now = ticks_ms();
+    const auto print_state = marlin_vars().print_state.get();
+    const uint16_t job_id = marlin_vars().job_id.get();
+    const uint8_t media_inserted = marlin_vars().media_inserted.get();
+
+    if (print_state != lcd_backlight_last_print_state || job_id != lcd_backlight_last_job_id || media_inserted != lcd_backlight_last_media_inserted) {
+        lcd_backlight_last_print_state = print_state;
+        lcd_backlight_last_job_id = job_id;
+        lcd_backlight_last_media_inserted = media_inserted;
+        lcd_backlight_activity_ping();
+        return;
+    }
+
+    if (lcd_backlight_printer_busy()) {
+        lcd_backlight_activity_ping();
+        return;
+    }
+
+    if (lcd_backlight_active && ticks_diff(now, lcd_backlight_last_activity_ms) >= LCD_IDLE_BACKLIGHT_TIMEOUT_MS) {
+        lcd_backlight_set_active(false);
+    }
+}
+#endif
+
+static void gui_handle_leds_and_lcd_backlight() {
+#if HAS_LEDS()
+    leds::LEDManager::instance().update();
+    #if PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL()
+    lcd_backlight_handle_idle_timeout();
+    #endif
+#endif
+}
+
 void gui_init(void) {
     display::init();
 
@@ -72,6 +153,10 @@ void gui_init(void) {
 #else
     jogwheel.SetJogwheelType(0);
 #endif
+
+#if HAS_LEDS() && (PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL())
+    lcd_backlight_init_activity();
+#endif
 }
 
 void gui_handle_jogwheel() {
@@ -80,6 +165,13 @@ void gui_handle_jogwheel() {
     int32_t encoder_diff = jogwheel.ConsumeEncoderDiff();
 
     if (encoder_diff != 0 || is_btn) {
+#if HAS_LEDS() && (PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL())
+        const bool backlight_was_active = lcd_backlight_is_active();
+        lcd_backlight_activity_ping();
+        if (!backlight_was_active) {
+            return;
+        }
+#endif
         gui::knob::EventEncoder(encoder_diff);
 
         if (is_btn) {
@@ -98,6 +190,14 @@ void gui_handle_touch() {
     if (!touch_event) {
         return;
     }
+
+#if HAS_LEDS() && (PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL())
+    const bool backlight_was_active = lcd_backlight_is_active();
+    lcd_backlight_activity_ping();
+    if (!backlight_was_active) {
+        return;
+    }
+#endif
 
     // we clicked on something, does not really matter on what we clicked
     // we must notify serve to so it knows user is doing something and resets menu timeout, heater timeout ...
@@ -167,6 +267,8 @@ void gui_bare_loop() {
 
     gui_handle_jogwheel();
 
+    gui_handle_leds_and_lcd_backlight();
+
     gui_redraw();
 
     --guiloop_nesting;
@@ -177,9 +279,7 @@ void gui_loop(void) {
     lcd::communication_check();
     gui_handle_jogwheel();
 
-#if HAS_LEDS()
-    leds::LEDManager::instance().update();
-#endif
+    gui_handle_leds_and_lcd_backlight();
 
 #if HAS_TOUCH()
     gui_handle_touch();

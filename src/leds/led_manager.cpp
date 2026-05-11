@@ -1,13 +1,19 @@
 #include "leds/led_manager.hpp"
 #include "display.hpp"
+#include "ili9488.hpp"
 #include "led_lcd_cs_selector.hpp"
 
 #include <leds/status_leds_handler.hpp>
 #include <marlin_vars.hpp>
 #include "neopixel.hpp"
 #include <option/has_side_leds.h>
+#include <option/has_xlcd.h>
 
 #include <config_store/store_instance.hpp>
+
+#if HAS_XLCD()
+    #include "hw_configuration.hpp"
+#endif
 
 #if HAS_SIDE_LEDS()
     #include "leds/side_strip_handler.hpp"
@@ -128,6 +134,7 @@ void LEDManager::update() {
     leds::AcControllerLedsHandler::update(color, marlin_vars().sd_percent_done);
 #endif
 
+    apply_lcd_brightness();
     status_leds.update();
 
 #if HAS_SIDE_LEDS()
@@ -206,8 +213,20 @@ void LEDManager::enter_power_panic() {
 }
 
 void LEDManager::set_lcd_brightness(uint8_t brightness) {
+    lcd_brightness = std::min<uint8_t>(brightness, 100);
+    apply_lcd_brightness();
+}
+
+void LEDManager::apply_lcd_brightness() {
+#if HAS_XLCD()
+    if (buddy::hw::Configuration::Instance().has_display_backlight_control()) {
+        ili9488_brightness_set((lcd_brightness * 255) / 100);
+        return;
+    }
+#endif
+
     // LCD backlight is connected to the green channel of the fourth LED (index 3) on the status strip
-    get_status_leds().set(ColorRGBW(0, (std::min<uint8_t>(brightness, 100) * 255) / 100, 0).data, 3);
+    get_status_leds().set(ColorRGBW(0, (lcd_brightness * 255) / 100, 0).data, 3);
 }
 
 } // namespace leds
