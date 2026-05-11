@@ -62,7 +62,8 @@ static RateLimiter<uint32_t> gui_loop_timer(GUI_DELAY_LOOP);
 static RateLimiter<uint32_t> gui_redraw_timer(GUI_DELAY_REDRAW);
 
 #if HAS_LEDS() && (PRINTER_IS_PRUSA_COREONE() || PRINTER_IS_PRUSA_COREONEL())
-static constexpr int32_t LCD_IDLE_BACKLIGHT_TIMEOUT_MS = 5 * 60 * 1000;
+static constexpr uint8_t LCD_BACKLIGHT_TIMEOUT_MIN_MIN = 1;
+static constexpr uint8_t LCD_BACKLIGHT_TIMEOUT_MAX_MIN = 30;
 static constexpr uint8_t LCD_BACKLIGHT_ACTIVE_BRIGHTNESS = 100;
 static constexpr uint8_t LCD_BACKLIGHT_OFF_BRIGHTNESS = 0;
 
@@ -99,6 +100,11 @@ static bool lcd_backlight_printer_busy() {
     return marlin_client::is_printing();
 }
 
+static int32_t lcd_backlight_timeout_ms() {
+    const uint8_t timeout_min = std::clamp(config_store().lcd_backlight_timeout_min.get(), LCD_BACKLIGHT_TIMEOUT_MIN_MIN, LCD_BACKLIGHT_TIMEOUT_MAX_MIN);
+    return timeout_min * 60 * 1000;
+}
+
 static void lcd_backlight_init_activity() {
     lcd_backlight_last_activity_ms = ticks_ms();
     lcd_backlight_last_print_state = marlin_vars().print_state.get();
@@ -126,7 +132,7 @@ static void lcd_backlight_handle_idle_timeout() {
         return;
     }
 
-    if (lcd_backlight_active && ticks_diff(now, lcd_backlight_last_activity_ms) >= LCD_IDLE_BACKLIGHT_TIMEOUT_MS) {
+    if (lcd_backlight_active && ticks_diff(now, lcd_backlight_last_activity_ms) >= lcd_backlight_timeout_ms()) {
         lcd_backlight_set_active(false);
     }
 }

@@ -120,6 +120,14 @@ protected:
     void click(IWindowMenu &window_menu) override;
 };
 
+class MI_ADV_LCD_TIMEOUT : public WiSpin {
+public:
+    MI_ADV_LCD_TIMEOUT();
+
+protected:
+    void OnClick() override;
+};
+
 class MI_ADV_CHOPPER_TOFF_X : public WiSpin {
 public:
     MI_ADV_CHOPPER_TOFF_X();

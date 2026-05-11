@@ -13,10 +13,11 @@ namespace detail {
 using ScreenMenuAdvancedSettings = ScreenMenu<
     GuiDefaults::MenuFooter,
     MI_RETURN,
-    MI_ADVANCED_STEPS_PER_MM,
-    MI_ADVANCED_MOTOR_CURRENTS,
+    MI_ADVANCED_CHOPPER_TIMING,
     MI_ADVANCED_HOMING_SENSITIVITY,
-    MI_ADVANCED_CHOPPER_TIMING>;
+    MI_ADV_LCD_TIMEOUT,
+    MI_ADVANCED_MOTOR_CURRENTS,
+    MI_ADVANCED_STEPS_PER_MM>;
 
 using ScreenMenuAdvancedStepsPerMm = ScreenMenu<
     GuiDefaults::MenuFooter,

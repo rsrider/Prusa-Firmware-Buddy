@@ -55,6 +55,13 @@ static constexpr NumericInputConfig chopper_hstrt_spin_config = {
     .step = 1,
 };
 
+static constexpr NumericInputConfig lcd_timeout_spin_config = {
+    .min_value = 1,
+    .max_value = 30,
+    .step = 1,
+    .unit = Unit::minute,
+};
+
 static void store_and_apply_steps_per_unit(const AxisEnum axis, const float steps) {
     if (steps < steps_per_unit_spin_config.min_value || steps > steps_per_unit_spin_config.max_value) {
         return;
@@ -479,6 +486,13 @@ MI_ADV_HOMING_SENS_RESET_DEFAULTS::MI_ADV_HOMING_SENS_RESET_DEFAULTS()
 
 void MI_ADV_HOMING_SENS_RESET_DEFAULTS::click([[maybe_unused]] IWindowMenu &window_menu) {
     Screens::Access()->Get()->WindowEvent(nullptr, GUI_event_t::CHILD_CLICK, reinterpret_cast<void *>(static_cast<intptr_t>(AdvancedSettingsClickCommand::Reset_homing_sensitivity)));
+}
+
+MI_ADV_LCD_TIMEOUT::MI_ADV_LCD_TIMEOUT()
+    : WiSpin(config_store().lcd_backlight_timeout_min.get(), lcd_timeout_spin_config, _("LCD timeout")) {}
+
+void MI_ADV_LCD_TIMEOUT::OnClick() {
+    config_store().lcd_backlight_timeout_min.set(static_cast<uint8_t>(GetVal()));
 }
 
 MI_ADV_CHOPPER_TOFF_X::MI_ADV_CHOPPER_TOFF_X()
