@@ -34,8 +34,13 @@ struct AxisCalibrationConfig {
 #if PRINTER_IS_PRUSA_MK4() || PRINTER_IS_PRUSA_COREONE()
 // 400-step motors
 static inline constexpr const AxisCalibrationConfig xy_axis_calibration_config {
+    // Unused due to speed_override, but must be set to make compiler happy.
     .speed_range = { 0.2f, 4.f },
     .enabled_harmonics = 0b1010,
+    // XL uses 6.0 rev/s for 200-step motors. Use half the motor speed for
+    // 400-step motors to keep roughly the same full-step frequency.
+    .speed_override = 3.0,
+    .magnitude_quotient = 1.25f,
 };
 #elif PRINTER_IS_PRUSA_XL()
 // 200-step motors
